@@ -26,6 +26,8 @@ Build a smart hive that has integrated sensors!
 
 ## TODO
 
+* Finish the code for the Scales
+* Add the code for meadow
 * Add Microphone
 	* Measure frequency/amplitude
 	* Can be used to determine Queen Status  and 🐝 😊 
