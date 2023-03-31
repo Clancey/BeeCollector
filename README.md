@@ -61,6 +61,6 @@ Build a smart hive that has integrated sensors!
 		* hx711 (This is just the amplifier you still need sensors)
 		* Load Cells
 			* I went with bar strain. 
-				* <img width="100" alt="image" src="https://user-images.githubusercontent.com/256046/229031552-a55b1538-0406-4c4f-ace0-4b2adcf6c929.png"
+				* <img width="100" alt="image" src="https://user-images.githubusercontent.com/256046/229031552-a55b1538-0406-4c4f-ace0-4b2adcf6c929.png">
 			* Half Bridge Strain Guage
-				* <img width="100" alt="image" src="https://user-images.githubusercontent.com/256046/229031663-e58606fc-cf4f-4118-8cf1-b12f494f85cf.png"
+				* <img width="100" alt="image" src="https://user-images.githubusercontent.com/256046/229031663-e58606fc-cf4f-4118-8cf1-b12f494f85cf.png">
