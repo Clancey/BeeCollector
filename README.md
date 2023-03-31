@@ -14,7 +14,7 @@ Build a smart hive that has integrated sensors!
 
 ## Tech Stack
 
-<img width="815" alt="image" src="https://user-images.githubusercontent.com/256046/229030376-91b8cd83-5d74-47b9-891d-8cfd5b5d2b0e.png">
+<img width="824" alt="image" src="https://user-images.githubusercontent.com/256046/229032407-c52b89fc-5e16-492c-941b-f1c32883c0f8.png">
 
 * C# or Python in the hive for data collection
 * Mqtt
