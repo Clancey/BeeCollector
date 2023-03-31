@@ -20,7 +20,7 @@ Build a smart hive that has integrated sensors!
 * Mqtt
 * .NET
 * Docker
-* Axiom.co
+* [Axiom.co](https://axiom.co/)
 * Azure SQL
 
 
