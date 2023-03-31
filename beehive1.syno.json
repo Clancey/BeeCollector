@@ -1,0 +1,85 @@
+{
+   "cap_add" : [],
+   "cap_drop" : [],
+   "cmd" : "",
+   "cpu_priority" : 50,
+   "devices" : null,
+   "enable_publish_all_ports" : false,
+   "enable_restart_policy" : true,
+   "enabled" : false,
+   "entrypoint_default" : "dotnet BeeCollector.dll",
+   "env_variables" : [
+      {
+         "key" : "PATH",
+         "value" : "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      },
+      {
+         "key" : "ASPNETCORE_URLS",
+         "value" : ""
+      },
+      {
+         "key" : "DOTNET_RUNNING_IN_CONTAINER",
+         "value" : "true"
+      },
+      {
+         "key" : "DOTNET_VERSION",
+         "value" : "7.0.4"
+      },
+      {
+         "key" : "ASPNET_VERSION",
+         "value" : "7.0.4"
+      },
+      {
+         "key" : "DOTNET_GENERATE_ASPNET_CERTIFICATE",
+         "value" : "false"
+      },
+      {
+         "key" : "DOTNET_NOLOGO",
+         "value" : "true"
+      },
+      {
+         "key" : "DOTNET_SDK_VERSION",
+         "value" : "7.0.202"
+      },
+      {
+         "key" : "DOTNET_USE_POLLING_FILE_WATCHER",
+         "value" : "true"
+      },
+      {
+         "key" : "NUGET_XMLDOC_MODE",
+         "value" : "skip"
+      },
+      {
+         "key" : "POWERSHELL_DISTRIBUTION_CHANNEL",
+         "value" : "PSDocker-DotnetSDK-Debian-11"
+      }
+   ],
+   "exporting" : false,
+   "id" : "fa904acaf2a0f516cca0a5b2bfb95a7eae80132c22fd22401a25aa5f9a4e66fd",
+   "image" : "beehive:latest",
+   "is_ddsm" : false,
+   "is_package" : false,
+   "links" : [],
+   "memory_limit" : 0,
+   "name" : "beehive1",
+   "network" : [
+      {
+         "driver" : "bridge",
+         "name" : "bridge"
+      }
+   ],
+   "network_mode" : "bridge",
+   "port_bindings" : [
+      {
+         "container_port" : 1883,
+         "host_port" : 1883,
+         "type" : "tcp"
+      }
+   ],
+   "privileged" : false,
+   "shortcut" : {
+      "enable_shortcut" : false
+   },
+   "use_host_network" : false,
+   "volume_bindings" : []
+}
