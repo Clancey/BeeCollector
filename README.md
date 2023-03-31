@@ -26,6 +26,9 @@ Build a smart hive that has integrated sensors!
 
 ## TODO
 
+* Add Microphone
+	* Measure frequency/amplitude
+	* Can be used to determine Queen Status  and 🐝 😊 
 * Build an API/ Mobile App
 * Build a Smart Hive Cover
 	* Camera
