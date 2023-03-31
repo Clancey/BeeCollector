@@ -24,7 +24,13 @@ Build a smart hive that has integrated sensors!
 * Azure SQL
 
 
+## TODO
 
+* Build an API/ Mobile App
+* Build a Smart Hive Cover
+	* Camera
+	* Humidity/Temp sensors
+* More documentation
 
 ## Parts List
 
