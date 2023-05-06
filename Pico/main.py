@@ -19,21 +19,22 @@ pin.toggle()
 sleep(1)
 pin.toggle()
 #Config
-wifiName = "Wifiname"
-wifiPassword =  "Password";
+wifiName = "***REMOVED***"
+wifiPassword =  "***REMOVED***";
 mqqtPort = 1883;
 mqqtServer = "synology.local";
 timeBetweenReadings = 60
-beeHiveName = "TestHive"
+beeHiveName = "Hive1"
 #if the pin is >0 we will grab ADC Temp as well. On a Pico the port is 4
 onBoardAdcTempPin = 4
 tempSensorsPins =[
-    {"name": "Middle", "pin": 26},
-    {"name": "Top", "pin": 27},
-    #{"name": "Top", "pin": 24}
+    # {"name": "Middle", "pin": 26},
+    # {"name": "Top", "pin": 27},
+    # {"name": "Outside", "pin": 28}
 ]
 comboSensorsPins =[
-    {"name": "Entrance", "pin": 7}
+    # {"name": "Entrance", "pin": 7}
+     {"name": "Lid", "pin": 7}
 ]
  
 hasScale = False
@@ -41,6 +42,7 @@ scaleDtPin= 9
 scaleSckPin= 10
 
 print("Hello, Pi Pico!")
+print("BeeHiveCollector v 0.9")
 
 pin_OUT = Pin(scaleDtPin, Pin.IN, pull=Pin.PULL_DOWN)
 pin_SCK = Pin(scaleSckPin, Pin.OUT)
@@ -149,7 +151,7 @@ wdt.feed() #resets countdown
 def publish(topic, value):
   client.publish(topic, value)
   print("publish Done")
-
+submittingDataFailCount = 0;
 def second_thread():
         print("Hello, Data collection started!")
         
@@ -174,11 +176,14 @@ def second_thread():
         except Exception as e:
             print(e)
 
+        wifiFailCount = 0
         while True:
           while(connectWifi() == 0):
             print("Error connecting to Wifi")
-            sleep(5)
-
+            wifiFailCount = wifiFailCount + 1
+            if(wifiFailCount > 10):
+              machine.reset();
+          wifiFailCount = 0
           hasError = False
           timeRemaining = timeBetweenReadings
           try:
@@ -252,8 +257,9 @@ def second_thread():
             
             timeRemaining = 60 - time.localtime()[5]
             print(timeRemaining)
-            
+            submittingDataFailCount = 0
           except Exception as e:
+            submittingDataFailCount = submittingDataFailCount + 1
             hasError = True
             print(e)
           if(hasError != True):
@@ -269,3 +275,5 @@ while True:
    pin.toggle()
    utime.sleep(0.25)
    wdt.feed() #resets countdown
+   if(submittingDataFailCount > 10):
+     machine.reset();
