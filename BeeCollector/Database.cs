@@ -10,6 +10,7 @@ public class Database
 	public Database()
 	{
 		httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiConstants.AxiumAuthKey}");
+		httpClient.Timeout = new TimeSpan(0, 1, 0);
 		var fsqlb = new FreeSql.FreeSqlBuilder()
 				.UseConnectionString(FreeSql.DataType.SqlServer, ApiConstants.DatabaseString);
 
@@ -71,11 +72,15 @@ public class Database
 			axiomTask = uploadDataToAxiom();
 		return axiomTask;
 	}
+	CancellationTokenSource uploadCancelSource;
 	async Task uploadDataToAxiom()
 	{
 		Console.WriteLine("Starting upload to Axiom");
+		uploadCancelSource = new CancellationTokenSource();
+		uploadCancelSource.CancelAfter(60 * 1000);
 		var queue = axiomTelemetry.ToList();
 		axiomTelemetry.Clear();
+		HttpResponseMessage r = null;
 		try
 		{
 
@@ -89,11 +94,14 @@ public class Database
 			}).ToList();
 			var json = JsonSerializer.Serialize(updateData);
 			var message = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-			var r = await httpClient.PostAsync($"https://api.axiom.co/v1/datasets/{axiomDataset}/ingest", message);
+			r = await httpClient.PostAsync($"https://api.axiom.co/v1/datasets/{axiomDataset}/ingest", message, uploadCancelSource.Token);
 			Console.WriteLine($"Sent to Axiom:{r.IsSuccessStatusCode}");
 		}
 		catch (Exception ex)
 		{
+			Console.WriteLine(ex);
+			var s =  r?.Content?.ReadAsStringAsync()?.Result;
+			Console.WriteLine(s);
 			Logger.SharedLogger.LogError(ex, "Error submitting data to Axiom");
 			axiomTelemetry.InsertRange(0, queue);
 		}
@@ -116,6 +124,7 @@ public class Database
 			Console.WriteLine($"Lines inserted: {r}");
 		}
 		catch (Exception ex) {
+			Console.WriteLine(ex);
 			dbTelemetry.InsertRange(0, queue);
 			Logger.SharedLogger.LogError(ex, "Error Inserting data to the database");
 		}

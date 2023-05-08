@@ -42,7 +42,7 @@ scaleDtPin= 9
 scaleSckPin= 10
 
 print("Hello, Pi Pico!")
-print("BeeHiveCollector v 0.9")
+print("BeeHiveCollector v 0.91")
 
 pin_OUT = Pin(scaleDtPin, Pin.IN, pull=Pin.PULL_DOWN)
 pin_SCK = Pin(scaleSckPin, Pin.OUT)
@@ -90,6 +90,7 @@ wlan.active(True)
 def connectWifi():
   if wlan.isconnected():
       print("Already connected to Wifi")
+      wdt.feed() #resets countdown
       return 1;
 
   print("Connecting to Wifi")
@@ -150,130 +151,169 @@ wdt.feed() #resets countdown
 
 def publish(topic, value):
   client.publish(topic, value)
+  wdt.feed()
   print("publish Done")
 submittingDataFailCount = 0;
-def second_thread():
-        print("Hello, Data collection started!")
-        
-        sleep(5)
+wifiFailCount = 0
+tempSensors = []
+comboSensors = []
+isSleeping = False        
+          
 
-        if(hasScale):
-          hx711 =  HX711(scaleDtPin,scaleSckPin);
-          # hx711 set_scale(1);
-          hx711.tare();
+def ReadAndSubmitData():
+  global isSleeping
+  global wifiFailCount
+  while(connectWifi() == 0):
+    print("Error connecting to Wifi")
+    wifiFailCount = wifiFailCount + 1
+    if(wifiFailCount > 10):
+      machine.reset();
+  wifiFailCount = 0
+  client.reconnect()
+  hasError = False
+  timeRemaining = timeBetweenReadings
+  try:
+    pin.toggle()
+    wdt.feed()
+    sensorValues = [];
+    print("Starting temp Sensors: {}".format(tempSensors.count));
+    for sensor in tempSensors:
+      try:
+        wdt.feed()
+        print("convert_temp");
+        sensor.sensor.convert_temp()
+        sleep(1)         # wait for results
+        print("read_temp");
+        wdt.feed()
+        temp = sensor.sensor.read_temp(sensor.roms);
+        print("sensorValues.append");
+        wdt.feed()
+        sensorValues.append({"name" : sensor.name, "type": "Temp", "value": temp});
+        print("{} Temperature: {}°C  ".format(sensor.name, temp)) 
+        wdt.feed()
+      except Exception as e:
+        print(e)
 
+    print("Starting combo Sensors");
+    for sensor in comboSensors:
 
-        tempSensors = []
-        comboSensors = []
+      try:
+        wdt.feed()
+        print("measure");
+        sensor.sensor.measure()
+        wdt.feed()
+        print("temperature");
+        temp = sensor.sensor.temperature()
+        print("humidity");
+        hum = sensor.sensor.humidity()
+        sensorValues.append({"name" : sensor.name, "type": "Temp", "value": temp});
+        sensorValues.append({"name" : sensor.name, "type": "Humidity", "value": hum});
+        wdt.feed()
+        print("{} Temperature: {}°C   Humidity: {:.0f}% ".format(sensor.name, temp, hum))
+      except Exception as e:
+        print(e)
+    if onBoardAdcTempPin > 0:
         try:
-          print("Setting up Sensors")
-          if onBoardAdcTempPin > 0:
-              adc = ADC(onBoardAdcTempPin)
-          for sensor in tempSensorsPins:
-            tempSensors.append(getD20Sensor(sensor["name"], sensor["pin"]))
-          for sensor in comboSensorsPins:
-            comboSensors.append(getComboSensor(sensor["name"], sensor["pin"]))
+          wdt.feed()
+          print("Onboard Temp Read");
+          ADC_voltage = adc.read_u16() * (3.3 / (65535))
+          temp = 27 - (ADC_voltage - 0.706)/0.001721
+          temp_fahrenheit=32+(1.8*temp)
+          sensorValues.append({"name" : "OnBoard", "type": "CPU_Temp", "value": temp});
+          print("OnBoard Temperature: {}°C  ".format(temp))
+          wdt.feed()
         except Exception as e:
-            print(e)
+          print(e)
 
-        wifiFailCount = 0
-        while True:
-          while(connectWifi() == 0):
-            print("Error connecting to Wifi")
-            wifiFailCount = wifiFailCount + 1
-            if(wifiFailCount > 10):
-              machine.reset();
-          wifiFailCount = 0
-          hasError = False
-          timeRemaining = timeBetweenReadings
-          try:
-            pin.toggle()
-            sensorValues = [];
-            print("Starting temp Sensors: {}".format(tempSensors.count));
-            for sensor in tempSensors:
-              try:
-                print("convert_temp");
-                sensor.sensor.convert_temp()
-                sleep(1)         # wait for results
-                print("read_temp");
-                temp = sensor.sensor.read_temp(sensor.roms);
-                print("sensorValues.append");
-                sensorValues.append({"name" : sensor.name, "type": "Temp", "value": temp});
-                print("{} Temperature: {}°C  ".format(sensor.name, temp)) 
-              except Exception as e:
-                print(e)
+    if(hasScale and hx711.is_ready()):
+      try:
+        wdt.feed()
+        print("Starting Scale");
+        units = hx711.get_value(10)
+        sensorValues.append({"name" : "Scale", "type": "Weight", "value": units});
+        print("Weight: {}g".format(units))
+        wdt.feed()
+      except Exception as e:
+        print(e)
+    snapShot = [{
+        "time": time.time(),
+        "data": {
+            "hiveName": beeHiveName,
+            "sensors": sensorValues
+        }
+    }]
+    print("We have data, sending request")
+    wdt.feed()
+    j = json.dumps(snapShot)
+    print(j)
+    wdt.feed()
+    
+    for s in sensorValues:
+        publish("{}/{}/{}/".format(beeHiveName, s["name"], s["type"]),str(s["value"]))
+        wdt.feed()
 
-            print("Starting combo Sensors");
-            for sensor in comboSensors:
+    # r = urequests.post("https://api.axiom.co/v1/datasets/{}/ingest".format(dataset), timeout=30, data=j, headers={"Authorization": "Bearer {}".format(authToken), "Content-Type": "application/json"})
+    # print(r.text)
+    # r.close()
+    
+    timeRemaining = 60 - time.localtime()[5]
+    print(timeRemaining)
+    wdt.feed()
+  except Exception as e:
+    hasError = True
+    print(e)
+  if(hasError != True):
+    isSleeping = True;
+    pin.toggle()
+    print("Sleeping for {} seconds".format(timeRemaining))  
+    sleep(timeRemaining)
+  else:
+    isSleeping = True;
+    sleep(5)
+def second_thread():
+  print("Hello, Data collection started!")
+  sleep(5)
 
-              try:
-                print("measure");
-                sensor.sensor.measure()
-                print("temperature");
-                temp = sensor.sensor.temperature()
-                print("humidity");
-                hum = sensor.sensor.humidity()
-                sensorValues.append({"name" : sensor.name, "type": "Temp", "value": temp});
-                sensorValues.append({"name" : sensor.name, "type": "Humidity", "value": hum});
-                print("{} Temperature: {}°C   Humidity: {:.0f}% ".format(sensor.name, temp, hum))
-              except Exception as e:
-                print(e)
-            if onBoardAdcTempPin > 0:
-                try:
-                  print("Onboard Temp Read");
-                  ADC_voltage = adc.read_u16() * (3.3 / (65535))
-                  temp = 27 - (ADC_voltage - 0.706)/0.001721
-                  temp_fahrenheit=32+(1.8*temp)
-                  sensorValues.append({"name" : "OnBoard", "type": "CPU_Temp", "value": temp});
-                  print("OnBoard Temperature: {}°C  ".format(temp))
-                except Exception as e:
-                  print(e)
+  if(hasScale):
+    hx711 =  HX711(scaleDtPin,scaleSckPin);
+    # hx711 set_scale(1);
+    hx711.tare();
+  try:
+    print("Setting up Sensors")
+    if onBoardAdcTempPin > 0:
+        adc = ADC(onBoardAdcTempPin)
+    for sensor in tempSensorsPins:
+      tempSensors.append(getD20Sensor(sensor["name"], sensor["pin"]))
+    for sensor in comboSensorsPins:
+      comboSensors.append(getComboSensor(sensor["name"], sensor["pin"]))
+  except Exception as e:
+      print(e)
 
-            if(hasScale and hx711.is_ready()):
-              try:
-                print("Starting Scale");
-                units = hx711.get_value(10)
-                sensorValues.append({"name" : "Scale", "type": "Weight", "value": units});
-                print("Weight: {}g".format(units))
-              except Exception as e:
-                print(e)
-            snapShot = [{
-                "time": time.time(),
-                "data": {
-                    "hiveName": beeHiveName,
-                    "sensors": sensorValues
-                }
-            }]
-            print("We have data, sending request")
-            j = json.dumps(snapShot)
-            print(j)
-            
-            for s in sensorValues:
-               publish("{}/{}/{}/".format(beeHiveName, s["name"], s["type"]),str(s["value"]))
+  global isSleeping
+  global submittingDataFailCount
+  while True:
+    try:
 
-            # r = urequests.post("https://api.axiom.co/v1/datasets/{}/ingest".format(dataset), timeout=30, data=j, headers={"Authorization": "Bearer {}".format(authToken), "Content-Type": "application/json"})
-            # print(r.text)
-            # r.close()
-            
-            timeRemaining = 60 - time.localtime()[5]
-            print(timeRemaining)
-            submittingDataFailCount = 0
-          except Exception as e:
-            submittingDataFailCount = submittingDataFailCount + 1
-            hasError = True
-            print(e)
-          if(hasError != True):
-            pin.toggle()
-            print("Sleeping for {} seconds".format(timeRemaining))  
-            sleep(timeRemaining)
-          else:
-            sleep(5)
+      isSleeping = False
+      ReadAndSubmitData()
+      isSleeping = True
+      submittingDataFailCount = 0;
+    except Exception as e:
+      submittingDataFailCount = submittingDataFailCount + 1
+      print(e)
+      print("Error reading data " + str(submittingDataFailCount) + " times")
 
+    
 _thread.start_new_thread(second_thread, ())
 
+
 while True:
-   pin.toggle()
-   utime.sleep(0.25)
-   wdt.feed() #resets countdown
-   if(submittingDataFailCount > 10):
-     machine.reset();
+  pin.toggle()
+  utime.sleep(0.25)
+  if(isSleeping == True):
+    # print("sleeping: So I feed")
+    wdt.feed() #resets countdown
+  # else:
+  #   print("Not sleeping: So I don't feed")
+  if(submittingDataFailCount > 5):
+    machine.reset();
