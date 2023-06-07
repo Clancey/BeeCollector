@@ -19,8 +19,8 @@ pin.toggle()
 sleep(1)
 pin.toggle()
 #Config
-wifiName = "***REMOVED***"
-wifiPassword =  "***REMOVED***";
+wifiName = ""
+wifiPassword =  "";
 mqqtPort = 1883;
 mqqtServer = "synology.local";
 timeBetweenReadings = 60
