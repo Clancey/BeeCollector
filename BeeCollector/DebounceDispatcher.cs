@@ -49,7 +49,7 @@ public class DebounceDispatcher<T>
 				{
 					do
 					{
-						int delay = (int)(interval - (DateTime.Now - lastInvokeTime).TotalMilliseconds);
+						int delay = Math.Max((int)(interval - (DateTime.Now - lastInvokeTime).TotalMilliseconds),0);
 						Task.Delay(delay).Wait();
 					} while ((DateTime.Now - lastInvokeTime).TotalMilliseconds < interval);
 

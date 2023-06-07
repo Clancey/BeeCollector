@@ -1,9 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.ApplicationInsights.Channel;
+using Sentry;
+
 public class Database
 {
-	HttpClient httpClient = new HttpClient();
+	HttpClient httpClient = new HttpClient(new SentryHttpMessageHandler());
 	public static Database Shared { get; set; } = new Database();
 
 	const string axiomDataset = "bees";
@@ -62,7 +64,7 @@ public class Database
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine(ex);
+			LogEx(ex);
 		}
 	}
 	Task axiomTask;
@@ -72,18 +74,16 @@ public class Database
 			axiomTask = uploadDataToAxiom();
 		return axiomTask;
 	}
-	CancellationTokenSource uploadCancelSource;
 	async Task uploadDataToAxiom()
 	{
 		Console.WriteLine("Starting upload to Axiom");
-		uploadCancelSource = new CancellationTokenSource();
-		uploadCancelSource.CancelAfter(60 * 1000);
 		var queue = axiomTelemetry.ToList();
 		axiomTelemetry.Clear();
 		HttpResponseMessage r = null;
 		try
 		{
-
+			var uploadCancelSource = new CancellationTokenSource();
+			uploadCancelSource.CancelAfter(60 * 1000);
 			var updateData = queue.Select(x => new
 			{
 				Hive = x.Hive,
@@ -99,12 +99,22 @@ public class Database
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine(ex);
+			LogEx(ex);
 			var s =  r?.Content?.ReadAsStringAsync()?.Result;
 			Console.WriteLine(s);
 			Logger.SharedLogger.LogError(ex, "Error submitting data to Axiom");
 			axiomTelemetry.InsertRange(0, queue);
 		}
+	}
+	void LogEx(Exception? ex)
+	{
+		if (ex == null)
+			return;
+
+		SentrySdk.CaptureException(ex);
+		Console.WriteLine(ex);
+		LogEx(ex.InnerException);
+
 	}
 	Task databaseTask;
 
@@ -123,8 +133,9 @@ public class Database
 			var r = await db.Insert<Telemetry>(queue).ExecuteAffrowsAsync();
 			Console.WriteLine($"Lines inserted: {r}");
 		}
-		catch (Exception ex) {
-			Console.WriteLine(ex);
+		catch (Exception ex)
+		{
+			LogEx(ex);
 			dbTelemetry.InsertRange(0, queue);
 			Logger.SharedLogger.LogError(ex, "Error Inserting data to the database");
 		}

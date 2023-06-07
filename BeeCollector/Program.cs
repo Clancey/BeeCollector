@@ -3,25 +3,39 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.DependencyInjection;
 using MQTTnet.Internal;
+using Sentry;
 
 using var channel = new InMemoryChannel();
 
 async Task Run()
 {
-	Console.WriteLine("Hello, World!");
-
-	var server = await Server.Run_Minimal_Server();
-	server.InterceptingPublishAsync += args =>
+	using (SentrySdk.Init(o =>
 	{
-		var payload = Encoding.UTF8.GetString(args.ApplicationMessage.Payload);
-		var topic = args.ApplicationMessage.Topic;
-		Database.Shared.ProcessMessage(topic, payload);
-		return CompletedTask.Instance;
-	};
+		o.Dsn = ApiConstants.SentryKey;
+		// When configuring for the first time, to see what the SDK is doing:
+		o.Debug = true;
+		// Set traces_sample_rate to 1.0 to capture 100% of transactions for performance monitoring.
+		// We recommend adjusting this value in production.
+		o.TracesSampleRate = 1.0;
+		// Enable Global Mode if running in a client app
+		o.IsGlobalModeEnabled = true;
+	}))
+	{
+		Console.WriteLine("Hello, World!");
 
-	Console.WriteLine("Press Enter to exit.");
-	Console.ReadLine();
-	await server.StopAsync();
+		var server = await Server.Run_Minimal_Server();
+		server.InterceptingPublishAsync += args =>
+		{
+			var payload = Encoding.UTF8.GetString(args.ApplicationMessage.Payload);
+			var topic = args.ApplicationMessage.Topic;
+			Database.Shared.ProcessMessage(topic, payload);
+			return CompletedTask.Instance;
+		};
+
+		Console.WriteLine("Press Enter to exit.");
+		Console.ReadLine();
+		await server.StopAsync();
+	}
 }
 
 

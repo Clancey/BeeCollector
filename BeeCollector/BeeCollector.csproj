@@ -11,6 +11,7 @@
     <PackageReference Include="MQTTnet" Version="4.1.4.563" />
     <PackageReference Include="FreeSql" Version="3.2.693" />
     <PackageReference Include="FreeSql.Provider.SqlServer" Version="3.2.693" />
+    <PackageReference Include="Sentry" Version="3.31.0" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="ApiConstants.cs" Condition="$([System.IO.File]::Exists($(MSBuildProjectDirectory)\..\ApiConstants.cs))" />
